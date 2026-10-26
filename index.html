@@ -119,25 +119,24 @@
   .bars span.d-none { background: var(--none); opacity: .5; }
   .history .scale { display: flex; justify-content: space-between; font-size: 12px; color: var(--muted); }
 
-  /* アドオン一覧：記号が縦にそろう表 */
-  .addons { width: 100%; border-collapse: collapse; }
-  .addons th { font-size: 13px; font-weight: 500; color: var(--muted); text-align: left; padding: 0 0 8px; }
-  .addons th.c, .addons td.c { text-align: center; width: 72px; }
-  .addons td { padding: 14px 0; border-top: 1px solid var(--line); vertical-align: middle; }
-  .addons .who { display: flex; align-items: center; gap: 14px; }
-  .addons .thumb { width: 48px; height: 48px; border-radius: 10px; flex: none; object-fit: contain; padding: 4px; background: var(--bg); }
-  .addons .swatch { width: 48px; height: 48px; border-radius: 10px; flex: none; }
-  .addons .nm { font-weight: 700; }
-  .addons .ver { font-size: 13px; color: var(--muted); }
-  .addons .note { font-size: 13px; color: var(--muted); line-height: 1.5; margin-top: 2px; }
-  .addons td.c .glyph { width: 30px; height: 30px; }
+  /* アドオンごとのタイル：横長のロゴを大きく見せる */
+  .tiles { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+  @media (max-width: 680px) { .tiles { grid-template-columns: 1fr; } }
+  .tile { border: 1px solid var(--line); border-radius: 12px; overflow: hidden; display: flex; flex-direction: column; }
+  /* ロゴは白地の横長（約3.5:1）なので、ダークモードでも白い台紙に横幅いっぱいで載せる */
+  .tile .banner { aspect-ratio: 3.5 / 1; background: #fff; border-bottom: 1px solid var(--line); display: flex; align-items: center; justify-content: center; }
+  .tile .banner img { width: 100%; height: 100%; object-fit: contain; display: block; }
+  .tile .banner.swatch { border-bottom: 0; }
+  .tile .head { padding: 14px 18px 4px; display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+  .tile .nm { font-weight: 700; font-size: 17px; line-height: 1.4; }
+  .tile .ver { font-size: 13px; color: var(--muted); white-space: nowrap; }
+  .tile .rows { padding: 4px 18px 10px; }
+  .tile .row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 0; }
+  .tile .row + .row { border-top: 2px dotted var(--line); }
+  .tile .label { font-size: 15px; font-weight: 500; }
+  .tile .note { font-size: 12px; color: var(--muted); line-height: 1.5; }
+  .tile .glyph { width: 30px; height: 30px; }
   .empty { color: var(--muted); margin: 0; }
-  @media (max-width: 560px) {
-    .addons th.c, .addons td.c { width: 48px; }
-    .addons .who { gap: 10px; }
-    .addons .thumb, .addons .swatch { width: 40px; height: 40px; }
-    .addons .ver { display: block; }
-  }
 
   /* お知らせの一覧（予定・過去） */
   .notes { list-style: none; margin: 0; padding: 0; }
@@ -202,10 +201,7 @@
 
   <section class="block" aria-labelledby="h-addons">
     <h2 id="h-addons">アドオンごとの状況</h2>
-    <table class="addons">
-      <thead><tr><th>アドオン</th><th class="c">認証</th><th class="c">申請</th></tr></thead>
-      <tbody id="addons"><tr><td colspan="3" class="empty">確認中…</td></tr></tbody>
-    </table>
+    <div class="tiles" id="addons"><p class="empty">確認中…</p></div>
   </section>
 
   <section class="block" aria-labelledby="h-notes" id="notesBlock" hidden>
@@ -328,19 +324,23 @@ function renderSystem(services) {
 }
 
 function renderAddons(addons, unreachable) {
-  var tb = document.getElementById('addons');
-  if (unreachable) { tb.innerHTML = '<tr><td colspan="3" class="empty">ライセンスサーバーに接続できないため、アドオンごとの状況を表示できません。</td></tr>'; return; }
-  if (!addons.length) { tb.innerHTML = '<tr><td colspan="3" class="empty">公開中のアドオンはありません。</td></tr>'; return; }
-  tb.innerHTML = addons.map(function(a) {
-    var pic = a.thumbnail_url
-      ? '<img class="thumb" src="' + esc(a.thumbnail_url) + '" alt="" loading="lazy">'
-      : '<span class="swatch" style="background:' + esc(/^#[0-9a-f]{3,8}$/i.test(a.color) ? a.color : '#8a9099') + '"></span>';
-    var notes = [a.services.verify.message, a.services.request.message].filter(Boolean);
-    return '<tr><td><div class="who">' + pic + '<div><div class="nm">' + esc(a.name)
-      + (a.latest_version ? ' <span class="ver">最新 ' + (/^\d/.test(a.latest_version) ? 'v' : '') + esc(a.latest_version) + '</span>' : '') + '</div>'
-      + (notes.length ? '<div class="note">' + notes.map(esc).join('<br>') + '</div>' : '') + '</div></div></td>'
-      + '<td class="c">' + glyph(a.services.verify.status) + '</td>'
-      + '<td class="c">' + glyph(a.services.request.status) + '</td></tr>';
+  var box = document.getElementById('addons');
+  if (unreachable) { box.innerHTML = '<p class="empty">ライセンスサーバーに接続できないため、アドオンごとの状況を表示できません。</p>'; return; }
+  if (!addons.length) { box.innerHTML = '<p class="empty">公開中のアドオンはありません。</p>'; return; }
+  var row = function(label, svc) {
+    return '<div class="row"><div><div class="label">' + label + '</div>'
+      + (svc.message ? '<div class="note">' + esc(svc.message) + '</div>' : '') + '</div>' + glyph(svc.status) + '</div>';
+  };
+  box.innerHTML = addons.map(function(a) {
+    var color = /^#[0-9a-f]{3,8}$/i.test(a.color) ? a.color : '#8a9099';
+    var banner = a.thumbnail_url
+      ? '<div class="banner"><img src="' + esc(a.thumbnail_url) + '" alt="' + esc(a.name) + '" loading="lazy"></div>'
+      : '<div class="banner swatch" style="background:' + esc(color) + '"></div>';
+    var ver = a.latest_version ? '<span class="ver">最新 ' + (/^\d/.test(a.latest_version) ? 'v' : '') + esc(a.latest_version) + '</span>' : '';
+    return '<article class="tile">' + banner
+      + '<div class="head"><div class="nm">' + esc(a.name) + '</div>' + ver + '</div>'
+      + '<div class="rows">' + row('ライセンス認証', a.services.verify) + row('ライセンス申請', a.services.request) + '</div>'
+      + '</article>';
   }).join('');
 }
 
