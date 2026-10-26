@@ -1,0 +1,435 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>サービス稼働状況 | Adacchi Creative</title>
+<meta name="description" content="Adacchi Creative の Blender アドオンのライセンス認証・申請の稼働状況です。">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@400;500;700;900&display=swap" rel="stylesheet">
+<style>
+  /* ── 色 ───────────────────────────────────── */
+  :root {
+    --bg: #e9ebee;          /* Blender ライトテーマ寄りの灰 */
+    --surface: #ffffff;
+    --ink: #1d2025;
+    --muted: #5d636c;
+    --line: #d5d9de;
+    --brand: #ea6a1a;       /* ロゴの橙 */
+    --ok: #1f9d55;
+    --warn: #c98700;
+    --ng: #d23b2f;
+    --none: #b9bfc6;
+    --focus: #2563eb;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #1f2125; --surface: #2a2d32; --ink: #eceef1; --muted: #a3a9b1; --line: #3b3f46;
+      --ok: #3fc07a; --warn: #f0b429; --ng: #f2685c; --none: #5b616a; --focus: #7aa2ff;
+    }
+  }
+
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0; background: var(--bg); color: var(--ink);
+    font-family: "Zen Kaku Gothic New", "Hiragino Sans", "Yu Gothic UI", sans-serif;
+    font-size: 16px; line-height: 1.7; font-feature-settings: "palt";
+  }
+  a { color: inherit; }
+  a:focus-visible, button:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; border-radius: 4px; }
+  .wrap { max-width: 960px; margin: 0 auto; padding: 0 16px; }
+
+  /* ── ヘッダー ─────────────────────────────── */
+  header.site { background: var(--surface); border-bottom: 1px solid var(--line); }
+  header.site .wrap { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 64px; }
+  .brand { display: flex; align-items: center; gap: 10px; text-decoration: none; font-weight: 700; font-size: 15px; }
+  .brand svg { flex: none; }
+  .brand small { display: block; font-weight: 500; font-size: 12px; color: var(--muted); line-height: 1.3; }
+  .checked { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--muted); }
+  .checked button {
+    font: inherit; font-size: 13px; color: var(--ink); background: transparent; cursor: pointer;
+    border: 1px solid var(--line); border-radius: 999px; padding: 4px 12px;
+  }
+  .checked button:hover { border-color: var(--muted); }
+  .checked span, .checked button { white-space: nowrap; }
+  @media (max-width: 480px) {
+    .brand small { display: none; }
+    .checked { flex-direction: column; align-items: flex-end; gap: 2px; }
+    .checked span { font-size: 11px; }
+  }
+
+  /* ── 状態の記号 ───────────────────────────── */
+  .glyph { display: inline-block; flex: none; width: 28px; height: 28px; }
+  .glyph svg { display: block; width: 100%; height: 100%; }
+  .s-operational { color: var(--ok); }
+  .s-paused, .s-degraded, .s-maintenance { color: var(--warn); }
+  .s-outage { color: var(--ng); }
+  .s-unknown { color: var(--none); }
+
+  /* ── 冒頭（いちばん大きな記号） ───────────── */
+  .hero { padding: 48px 0 40px; display: grid; grid-template-columns: auto 1fr; gap: 28px; align-items: center; }
+  .hero .glyph { width: 112px; height: 112px; }
+  .hero h1 { margin: 0; font-size: clamp(26px, 4.2vw, 38px); line-height: 1.3; font-weight: 900; letter-spacing: .01em; }
+  .hero p { margin: 8px 0 0; color: var(--muted); max-width: 36em; }
+  @media (max-width: 560px) {
+    .hero { grid-template-columns: 1fr; gap: 16px; padding: 32px 0 28px; }
+    .hero .glyph { width: 80px; height: 80px; }
+  }
+
+  /* ── お知らせ（今出ているもの） ───────────── */
+  .alerts { display: grid; gap: 12px; margin-bottom: 32px; }
+  .alert { background: var(--surface); border-left: 6px solid var(--warn); border-radius: 0 10px 10px 0; padding: 16px 20px; }
+  .alert.l-outage { border-left-color: var(--ng); }
+  .alert.l-info { border-left-color: var(--muted); }
+  .alert h3 { margin: 0; font-size: 17px; }
+  .alert .when { font-size: 13px; color: var(--muted); margin-top: 2px; }
+  .alert .body { margin: 8px 0 0; white-space: pre-wrap; }
+
+  /* ── 区画 ─────────────────────────────────── */
+  section.block { background: var(--surface); border-radius: 14px; padding: 24px 28px; margin-bottom: 20px; }
+  section.block > h2 { margin: 0 0 16px; font-size: 19px; font-weight: 700; }
+  @media (max-width: 560px) { section.block { padding: 20px 16px; } }
+
+  /* システム全体：任天堂の稼働状況と同じく、横並び＋点線の区切り */
+  .sys { display: grid; grid-template-columns: repeat(3, 1fr); }
+  .sys .item { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 6px 20px; }
+  .sys .item + .item { border-left: 2px dotted var(--line); }
+  .sys .item:first-child { padding-left: 0; }
+  .sys .item:last-child { padding-right: 0; }
+  .sys .name { font-weight: 700; font-size: 15px; }
+  .sys .msg { font-size: 12px; color: var(--muted); line-height: 1.5; }
+  .sys .glyph { width: 34px; height: 34px; }
+  @media (max-width: 720px) {
+    .sys { grid-template-columns: 1fr; }
+    .sys .item { padding: 12px 0; }
+    .sys .item + .item { border-left: 0; border-top: 2px dotted var(--line); }
+  }
+
+  /* 過去90日の稼働 */
+  .history { margin-top: 22px; padding-top: 18px; border-top: 1px solid var(--line); }
+  .history .head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; font-size: 14px; }
+  .history .head strong { font-size: 15px; }
+  .bars { display: flex; gap: 2px; height: 36px; margin: 10px 0 6px; }
+  .bars span { flex: 1; border-radius: 2px; background: var(--ok); opacity: .85; }
+  .bars span.d-warn { background: var(--warn); opacity: 1; }
+  .bars span.d-ng { background: var(--ng); opacity: 1; }
+  .bars span.d-none { background: var(--none); opacity: .5; }
+  .history .scale { display: flex; justify-content: space-between; font-size: 12px; color: var(--muted); }
+
+  /* アドオン一覧：記号が縦にそろう表 */
+  .addons { width: 100%; border-collapse: collapse; }
+  .addons th { font-size: 13px; font-weight: 500; color: var(--muted); text-align: left; padding: 0 0 8px; }
+  .addons th.c, .addons td.c { text-align: center; width: 72px; }
+  .addons td { padding: 14px 0; border-top: 1px solid var(--line); vertical-align: middle; }
+  .addons .who { display: flex; align-items: center; gap: 14px; }
+  .addons .thumb { width: 48px; height: 48px; border-radius: 10px; flex: none; object-fit: cover; background: var(--bg); }
+  .addons .swatch { width: 48px; height: 48px; border-radius: 10px; flex: none; }
+  .addons .nm { font-weight: 700; }
+  .addons .ver { font-size: 13px; color: var(--muted); }
+  .addons .note { font-size: 13px; color: var(--muted); line-height: 1.5; margin-top: 2px; }
+  .addons td.c .glyph { width: 30px; height: 30px; }
+  .empty { color: var(--muted); margin: 0; }
+  @media (max-width: 560px) {
+    .addons th.c, .addons td.c { width: 48px; }
+    .addons .who { gap: 10px; }
+    .addons .thumb, .addons .swatch { width: 40px; height: 40px; }
+    .addons .ver { display: block; }
+  }
+
+  /* お知らせの一覧（予定・過去） */
+  .notes { list-style: none; margin: 0; padding: 0; }
+  .notes li { padding: 14px 0; border-top: 1px solid var(--line); }
+  .notes li:first-child { border-top: 0; padding-top: 0; }
+  .tag { display: inline-block; font-size: 12px; font-weight: 700; padding: 1px 8px; border-radius: 4px; margin-right: 8px; vertical-align: 1px; color: #fff; background: var(--muted); }
+  .tag.l-maintenance, .tag.l-degraded { background: var(--warn); }
+  .tag.l-outage { background: var(--ng); }
+  .notes .t { font-weight: 700; }
+  .notes .when { font-size: 13px; color: var(--muted); }
+  .notes details { margin-top: 4px; }
+  .notes summary { cursor: pointer; font-size: 13px; color: var(--muted); }
+  .notes .body { white-space: pre-wrap; margin: 6px 0 0; font-size: 15px; }
+  h3.sub { font-size: 15px; margin: 22px 0 10px; }
+  h3.sub:first-of-type { margin-top: 0; }
+
+  /* 凡例とフッター */
+  .legend { display: flex; flex-wrap: wrap; gap: 8px 24px; font-size: 14px; color: var(--muted); margin: 8px 0 0; padding: 0; list-style: none; }
+  .legend li { display: flex; align-items: center; gap: 8px; }
+  .legend .glyph { width: 20px; height: 20px; }
+  footer.site { padding: 24px 0 48px; font-size: 13px; color: var(--muted); }
+  footer.site .links { display: flex; flex-wrap: wrap; gap: 8px 20px; margin-bottom: 10px; }
+
+  .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  [hidden] { display: none !important; }
+</style>
+</head>
+<body>
+<header class="site">
+  <div class="wrap">
+    <a class="brand" href="./">
+      <svg width="30" height="30" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="8" fill="#ea6a1a"/><path d="M16 6.5 8.5 9.5v6c0 4.6 3.1 8.6 7.5 10 4.4-1.4 7.5-5.4 7.5-10v-6z" fill="none" stroke="#fff" stroke-width="2.2" stroke-linejoin="round"/><circle cx="16" cy="15.5" r="2.6" fill="#fff"/></svg>
+      <span>サービス稼働状況<small>Adacchi Creative の Blender アドオン</small></span>
+    </a>
+    <div class="checked">
+      <span id="checkedAt" aria-live="polite">確認中…</span>
+      <button type="button" id="refresh">再確認</button>
+    </div>
+  </div>
+</header>
+
+<main class="wrap">
+  <div class="hero">
+    <span class="glyph s-unknown" id="heroGlyph"></span>
+    <div>
+      <h1 id="heroTitle">状況を確認しています</h1>
+      <p id="heroText">少しお待ちください。</p>
+    </div>
+  </div>
+
+  <div class="alerts" id="alerts"></div>
+
+  <section class="block" aria-labelledby="h-sys">
+    <h2 id="h-sys">ライセンスのしくみ全体</h2>
+    <div class="sys" id="sys"></div>
+    <div class="history" id="history" hidden>
+      <div class="head"><strong>過去90日の稼働</strong><span id="uptimeText"></span></div>
+      <div class="bars" id="bars" role="img"></div>
+      <div class="scale"><span>90日前</span><span>今日</span></div>
+    </div>
+  </section>
+
+  <section class="block" aria-labelledby="h-addons">
+    <h2 id="h-addons">アドオンごとの状況</h2>
+    <table class="addons">
+      <thead><tr><th>アドオン</th><th class="c">認証</th><th class="c">申請</th></tr></thead>
+      <tbody id="addons"><tr><td colspan="3" class="empty">確認中…</td></tr></tbody>
+    </table>
+  </section>
+
+  <section class="block" aria-labelledby="h-notes" id="notesBlock" hidden>
+    <h2 id="h-notes">お知らせ</h2>
+    <div id="notes"></div>
+  </section>
+
+  <ul class="legend" id="legend"></ul>
+</main>
+
+<footer class="site">
+  <div class="wrap">
+    <div class="links">
+      <a id="historyLink" href="#" target="_blank" rel="noopener">詳しい稼働履歴</a>
+      <a id="contactLink" href="#" target="_blank" rel="noopener">お問い合わせ</a>
+    </div>
+    <div>このページは1分ごとに自動で再確認します。ライセンス認証はオフライン期限内であれば、障害中もそのままお使いいただけます。</div>
+  </div>
+</footer>
+
+<script>
+/* ── 設定（変更するのはここだけ） ───────────────────── */
+var CONFIG = {
+  // ライセンスサーバーの公開用の状況API
+  apiUrl: 'https://license-manager.adacchi-creative.com/api/v1/public-status',
+  // Upptime（外部監視）の集計データと、その状況ページ
+  upptimeSummaryUrl: 'https://raw.githubusercontent.com/Adacchi-MultiCreator/upptime/HEAD/history/summary.json',
+  upptimeSiteUrl: 'https://adacchi-multicreator.github.io/upptime/',
+  // Upptime の監視のうち、ライセンスサーバー本体を表すもの（.upptimerc.yml の name から自動で作られる slug）
+  upptimeSlug: 'license-server',
+  // お問い合わせ先
+  contactUrl: 'https://github.com/Adacchi-MultiCreator',
+  refreshSeconds: 60,
+  timeoutMs: 10000
+};
+
+/* ── 記号 ─────────────────────────────────────────── */
+var GLYPH = {
+  ok:   '<svg viewBox="0 0 40 40" aria-hidden="true"><circle cx="20" cy="20" r="15" fill="none" stroke="currentColor" stroke-width="5"/></svg>',
+  warn: '<svg viewBox="0 0 40 40" aria-hidden="true"><path d="M20 6 35 32H5z" fill="none" stroke="currentColor" stroke-width="4.5" stroke-linejoin="round"/></svg>',
+  ng:   '<svg viewBox="0 0 40 40" aria-hidden="true"><path d="M9 9l22 22M31 9 9 31" stroke="currentColor" stroke-width="5.5" stroke-linecap="round"/></svg>',
+  none: '<svg viewBox="0 0 40 40" aria-hidden="true"><path d="M10 20h20" stroke="currentColor" stroke-width="5" stroke-linecap="round"/></svg>'
+};
+var STATE = {
+  operational: { g: 'ok',   label: '正常' },
+  paused:      { g: 'warn', label: '受付停止中' },
+  degraded:    { g: 'warn', label: '一部不具合' },
+  maintenance: { g: 'warn', label: 'メンテナンス中' },
+  outage:      { g: 'ng',   label: '障害' },
+  unknown:     { g: 'none', label: '確認できません' }
+};
+var HERO = {
+  operational: ['すべて正常に稼働しています', 'ライセンスの認証と申請は、いつもどおりご利用いただけます。'],
+  paused:      ['一部のアドオンで受付を停止しています', '詳しくは、下のアドオンごとの状況をご覧ください。'],
+  degraded:    ['一部に不具合が出ています', '影響のある機能は下に表示しています。復旧まで少しお待ちください。'],
+  maintenance: ['メンテナンス中です', '終了予定はお知らせをご覧ください。'],
+  outage:      ['障害が発生しています', '復旧作業を行っています。オフライン期限内のアドオンは、そのままお使いいただけます。'],
+  unreachable: ['ライセンスサーバーに接続できません', 'サーバーが停止しているか、お使いの回線から届いていない可能性があります。時間をおいて再確認してください。']
+};
+var LEVEL = { info: 'お知らせ', maintenance: 'メンテナンス', degraded: '一部不具合', outage: '障害' };
+var TARGET = { all: '', verify: 'ライセンス認証', request: 'ライセンス申請' };
+
+function esc(s) {
+  return String(s == null ? '' : s).replace(/[&<>"']/g, function(c) {
+    return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+  });
+}
+function glyph(status, size) {
+  var st = STATE[status] || STATE.unknown;
+  return '<span class="glyph s-' + (STATE[status] ? status : 'unknown') + '"' + (size ? ' style="width:' + size + 'px;height:' + size + 'px"' : '')
+    + ' role="img" aria-label="' + st.label + '">' + GLYPH[st.g] + '</span>';
+}
+function fmt(iso, withDate) {
+  if (!iso) return '';
+  var d = new Date(iso); if (isNaN(d)) return '';
+  var p = function(n) { return (n < 10 ? '0' : '') + n; };
+  var t = p(d.getHours()) + ':' + p(d.getMinutes());
+  return withDate === false ? t : (d.getMonth() + 1) + '月' + d.getDate() + '日 ' + t;
+}
+function period(n) {
+  var s = n.starts_at ? fmt(n.starts_at) : '', e = n.ends_at ? fmt(n.ends_at) : '';
+  if (s && e) return s + ' 〜 ' + e;
+  if (s) return s + ' 〜 終了未定';
+  if (e) return '〜 ' + e;
+  return '';
+}
+function scope(n) {
+  var who = n.addon_name ? n.addon_name : '';
+  var what = TARGET[n.target] || '';
+  return [who, what].filter(Boolean).join(' の ');
+}
+
+function fetchJson(url) {
+  var ctl = 'AbortController' in window ? new AbortController() : null;
+  var timer = ctl ? setTimeout(function() { ctl.abort(); }, CONFIG.timeoutMs) : null;
+  return fetch(url + (url.indexOf('?') < 0 ? '?' : '&') + '_=' + Date.now(), { cache: 'no-store', signal: ctl ? ctl.signal : undefined })
+    .then(function(r) { if (timer) clearTimeout(timer); if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+    .catch(function(e) { if (timer) clearTimeout(timer); throw e; });
+}
+
+/* ── 描画 ─────────────────────────────────────────── */
+function renderHero(key) {
+  var h = HERO[key] || HERO.operational;
+  var st = key === 'unreachable' ? 'outage' : key;
+  var el = document.getElementById('heroGlyph');
+  el.className = 'glyph s-' + (STATE[st] ? st : 'unknown');
+  el.setAttribute('role', 'img'); el.setAttribute('aria-label', (STATE[st] || STATE.unknown).label);
+  el.innerHTML = GLYPH[(STATE[st] || STATE.unknown).g];
+  document.getElementById('heroTitle').textContent = h[0];
+  document.getElementById('heroText').textContent = h[1];
+  document.title = h[0] + ' | サービス稼働状況';
+}
+
+function renderSystem(services) {
+  document.getElementById('sys').innerHTML = services.map(function(s) {
+    var st = STATE[s.status] || STATE.unknown;
+    return '<div class="item"><div><div class="name">' + esc(s.name) + '</div>'
+      + '<div class="msg">' + esc(s.message || st.label) + '</div></div>' + glyph(s.status) + '</div>';
+  }).join('');
+}
+
+function renderAddons(addons, unreachable) {
+  var tb = document.getElementById('addons');
+  if (unreachable) { tb.innerHTML = '<tr><td colspan="3" class="empty">ライセンスサーバーに接続できないため、アドオンごとの状況を表示できません。</td></tr>'; return; }
+  if (!addons.length) { tb.innerHTML = '<tr><td colspan="3" class="empty">公開中のアドオンはありません。</td></tr>'; return; }
+  tb.innerHTML = addons.map(function(a) {
+    var pic = a.thumbnail_url
+      ? '<img class="thumb" src="' + esc(a.thumbnail_url) + '" alt="" loading="lazy">'
+      : '<span class="swatch" style="background:' + esc(/^#[0-9a-f]{3,8}$/i.test(a.color) ? a.color : '#8a9099') + '"></span>';
+    var notes = [a.services.verify.message, a.services.request.message].filter(Boolean);
+    return '<tr><td><div class="who">' + pic + '<div><div class="nm">' + esc(a.name)
+      + (a.latest_version ? ' <span class="ver">最新 v' + esc(a.latest_version) + '</span>' : '') + '</div>'
+      + (notes.length ? '<div class="note">' + notes.map(esc).join('<br>') + '</div>' : '') + '</div></div></td>'
+      + '<td class="c">' + glyph(a.services.verify.status) + '</td>'
+      + '<td class="c">' + glyph(a.services.request.status) + '</td></tr>';
+  }).join('');
+}
+
+function renderAlerts(active) {
+  document.getElementById('alerts').innerHTML = (active || []).map(function(n) {
+    var meta = [LEVEL[n.level], scope(n), period(n)].filter(Boolean).join('　');
+    return '<div class="alert l-' + esc(n.level) + '"><h3>' + esc(n.title) + '</h3><div class="when">' + esc(meta) + '</div>'
+      + (n.body ? '<p class="body">' + esc(n.body) + '</p>' : '') + '</div>';
+  }).join('');
+}
+
+function renderNotes(notices) {
+  var up = notices.upcoming || [], past = notices.recent || [];
+  var blk = document.getElementById('notesBlock');
+  blk.hidden = !up.length && !past.length;
+  var li = function(n) {
+    return '<li><span class="tag l-' + esc(n.level) + '">' + esc(LEVEL[n.level] || '') + '</span><span class="t">' + esc(n.title) + '</span>'
+      + '<div class="when">' + esc([scope(n), period(n)].filter(Boolean).join('　')) + '</div>'
+      + (n.body ? '<details><summary>詳しく見る</summary><p class="body">' + esc(n.body) + '</p></details>' : '') + '</li>';
+  };
+  document.getElementById('notes').innerHTML =
+    (up.length ? '<h3 class="sub">予定</h3><ul class="notes">' + up.map(li).join('') + '</ul>' : '')
+    + (past.length ? '<h3 class="sub">過去30日</h3><ul class="notes">' + past.map(li).join('') + '</ul>' : '');
+}
+
+function renderHistory(summary) {
+  var box = document.getElementById('history');
+  var m = (summary || []).filter(function(s) { return s.slug === CONFIG.upptimeSlug; })[0] || (summary || [])[0];
+  if (!m) { box.hidden = true; return; }
+  var down = m.dailyMinutesDown || {};
+  var html = '', today = new Date(), p = function(n) { return (n < 10 ? '0' : '') + n; };
+  for (var i = 89; i >= 0; i--) {
+    var d = new Date(today.getFullYear(), today.getMonth(), today.getDate() - i);
+    var key = d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate());
+    var min = down[key] || 0;
+    var cls = min === 0 ? '' : (min < 30 ? 'd-warn' : 'd-ng');
+    var tip = (d.getMonth() + 1) + '月' + d.getDate() + '日：' + (min ? '停止 約' + min + '分' : '停止なし');
+    html += '<span class="' + cls + '" title="' + tip + '"></span>';
+  }
+  var bars = document.getElementById('bars');
+  bars.innerHTML = html;
+  bars.setAttribute('aria-label', '過去90日の稼働。停止のあった日は ' + Object.keys(down).length + ' 日');
+  document.getElementById('uptimeText').textContent = '稼働率 ' + (m.uptimeMonth || m.uptime || '—') + '（30日）';
+  box.hidden = false;
+}
+
+function renderLegend() {
+  document.getElementById('legend').innerHTML =
+    '<li>' + glyph('operational') + '正常</li>'
+    + '<li>' + glyph('maintenance') + '受付停止・一部不具合・メンテナンス</li>'
+    + '<li>' + glyph('outage') + '障害</li>';
+}
+
+/* ── 取得 ─────────────────────────────────────────── */
+var busy = false;
+function load() {
+  if (busy) return; busy = true;
+  var btn = document.getElementById('refresh'); btn.disabled = true;
+
+  var api = fetchJson(CONFIG.apiUrl).then(function(d) {
+    renderHero(d.overall);
+    renderSystem(d.services || []);
+    renderAddons(d.addons || [], false);
+    renderAlerts((d.notices || {}).active);
+    renderNotes(d.notices || {});
+  }, function() {
+    renderHero('unreachable');
+    renderSystem([
+      { name: 'ライセンスサーバー', status: 'outage', message: '接続できません' },
+      { name: 'ライセンス認証', status: 'unknown' },
+      { name: 'ライセンス申請', status: 'unknown' }
+    ]);
+    renderAddons([], true);
+  });
+  var hist = fetchJson(CONFIG.upptimeSummaryUrl).then(renderHistory, function() { document.getElementById('history').hidden = true; });
+
+  Promise.all([api, hist]).then(function() {
+    document.getElementById('checkedAt').textContent = '最終確認 ' + fmt(new Date().toISOString(), false);
+    busy = false; btn.disabled = false;
+  });
+}
+
+document.getElementById('historyLink').href = CONFIG.upptimeSiteUrl;
+document.getElementById('contactLink').href = CONFIG.contactUrl;
+document.getElementById('refresh').addEventListener('click', load);
+renderLegend();
+load();
+setInterval(function() { if (!document.hidden) load(); }, CONFIG.refreshSeconds * 1000);
+document.addEventListener('visibilitychange', function() { if (!document.hidden) load(); });
+</script>
+</body>
+</html>
