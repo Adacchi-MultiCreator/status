@@ -125,7 +125,7 @@
   .addons th.c, .addons td.c { text-align: center; width: 72px; }
   .addons td { padding: 14px 0; border-top: 1px solid var(--line); vertical-align: middle; }
   .addons .who { display: flex; align-items: center; gap: 14px; }
-  .addons .thumb { width: 48px; height: 48px; border-radius: 10px; flex: none; object-fit: cover; background: var(--bg); }
+  .addons .thumb { width: 48px; height: 48px; border-radius: 10px; flex: none; object-fit: contain; padding: 4px; background: var(--bg); }
   .addons .swatch { width: 48px; height: 48px; border-radius: 10px; flex: none; }
   .addons .nm { font-weight: 700; }
   .addons .ver { font-size: 13px; color: var(--muted); }
@@ -337,7 +337,7 @@ function renderAddons(addons, unreachable) {
       : '<span class="swatch" style="background:' + esc(/^#[0-9a-f]{3,8}$/i.test(a.color) ? a.color : '#8a9099') + '"></span>';
     var notes = [a.services.verify.message, a.services.request.message].filter(Boolean);
     return '<tr><td><div class="who">' + pic + '<div><div class="nm">' + esc(a.name)
-      + (a.latest_version ? ' <span class="ver">最新 v' + esc(a.latest_version) + '</span>' : '') + '</div>'
+      + (a.latest_version ? ' <span class="ver">最新 ' + (/^\d/.test(a.latest_version) ? 'v' : '') + esc(a.latest_version) + '</span>' : '') + '</div>'
       + (notes.length ? '<div class="note">' + notes.map(esc).join('<br>') + '</div>' : '') + '</div></div></td>'
       + '<td class="c">' + glyph(a.services.verify.status) + '</td>'
       + '<td class="c">' + glyph(a.services.request.status) + '</td></tr>';
